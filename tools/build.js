@@ -109,10 +109,8 @@ function merge(seed, parsed) {
   }));
 }
 
-/* ---------- 2. 繁简折叠表（仅保留语料中出现过的繁体字） ---------- */
+/* ---------- 2. 繁简折叠表（OpenCC TSCharacters 全表，供显示切换与检索） ---------- */
 function buildFold(poems) {
-  const have = new Set();
-  for (const p of poems) for (const ch of (p.title + p.content)) have.add(ch);
   const file = path.join(WORK, 'TSCharacters.txt');
   if (!fs.existsSync(file)) { console.warn('  未找到 TSCharacters.txt，跳过繁简折叠'); return []; }
   const lines = fs.readFileSync(file, 'utf-8').split('\n');
@@ -125,7 +123,6 @@ function buildFold(poems) {
     const t = parts[0], s1 = [...parts[1]][0];
     if ([...t].length !== 1 || !s1) continue;
     if (t === s1) continue;
-    if (!have.has(t)) continue;           // 只保留语料中真正出现的繁体字
     if (used.has(t)) continue;
     used.add(t);
     pairs.push([t, s1]);

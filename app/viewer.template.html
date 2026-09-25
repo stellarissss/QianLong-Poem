@@ -172,6 +172,12 @@ footer{border-top:1px solid var(--line);padding:18px 0 40px;color:var(--muted);f
           <option value="title">詩題</option>
         </select>
       </div>
+      <div class="field"><label>語言</label>
+        <select id="lang">
+          <option value="Hant">繁體</option>
+          <option value="Hans">简体</option>
+        </select>
+      </div>
       <div class="chips" id="quick"></div>
       <div class="spacer"></div>
       <button class="btn ghost" id="favBtn" title="只看收藏">☆ 收藏</button>
@@ -229,6 +235,56 @@ const FOLD=new Map();
 function foldOne(ch){return FOLD.get(ch)||ch;}
 function fold(str){let o='';for(const ch of str)o+=foldOne(ch);return o;}
 
+/* ---------- 界面语言：全文繁→简显示转换 ----------
+ * 数据与界面一律以繁体（底本原文）为唯一正本；简体仅作显示转换，
+ * 因此只需一张 T→S 映射，切换回繁体即由重新渲染还原，无需 S→T。
+ * 少数专名/异体/易歧义字不改写，保持辨识度。 */
+const KEEP_TS=new Set(['乾','著','於']);   // 乾隆／書著／姓於 等，简体仍可读，不作简化以免误读
+function t2s(str){
+  if(!str)return str;
+  let o='';const L=str.length;
+  for(let i=0;i<L;i++){const c=str[i];
+    if(KEEP_TS.has(c)){o+=c;continue;}
+    o+=FOLD.get(c)||c;}
+  return o;
+}
+
+/* 动态渲染区：其内容总是由 render* 依繁体正本重建，随后在 Hans 态执行一次 T2S */
+const DYN_IDS=['list','detail','hist','more','count','modeHint','histNote','legend','toast'];
+function normLang(v){return v==='Hans'?'Hans':'Hant';}
+function localize(el){
+  if(el&&state.lang==='Hans'){
+    const tw=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null);
+    const ns=[];let n;while(n=tw.nextNode())ns.push(n);
+    for(const t of ns){const v=t2s(t.nodeValue);if(t.nodeValue!==v)t.nodeValue=v;}
+  }
+}
+/* 静态界面文字：load 时抓取繁体正本快照，切换时按目标语言重放（不依赖 S→T） */
+const STATIC_SNAP=[];
+function snapStatic(root){
+  if(STATIC_SNAP.length)return;
+  const tw=document.createTreeWalker(root||document.body,NodeFilter.SHOW_TEXT,null);
+  const ns=[];let n;while(n=tw.nextNode())ns.push(n);
+  for(const t of ns){
+    if(!t.nodeValue||!t.nodeValue.trim())continue;
+    const p=t.parentElement;
+    if(!p||p.closest('script')||p.closest('style'))continue;
+    if(p.closest('#'+DYN_IDS.join(',#')))continue;   // 动态区不录入静态快照
+    STATIC_SNAP.push({t,hant:t.nodeValue});
+  }
+}
+function applyStatic(){
+  for(const e of STATIC_SNAP)e.t.nodeValue=state.lang==='Hans'?t2s(e.hant):e.hant;
+}
+function applyLang(){
+  document.documentElement.lang=state.lang==='Hans'?'zh-Hans':'zh-Hant';
+  applyStatic();                                  // 静态界面文字：繁体正本 → 目标语言
+  elLang.value=state.lang;
+  renderAll(true);                                // 动态区：由繁体正本重建，Hans 态在 renderAll 末尾统一 T2S
+  store('ql_lang',state.lang);
+  syncHash();
+}
+
 /* ---------- 数据装载 ---------- */
 let BASE=JSON.parse(document.getElementById('DB').textContent||'{"poems":[]}').poems||[];
 let CUSTOM=[];
@@ -252,11 +308,11 @@ function foldInfo(p,field){
 
 /* ---------- 表单要素 ---------- */
 const $=(s)=>document.querySelector(s);
-const elQ=$('#q'),elScope=$('#scope'),elFuzzy=$('#fuzzy'),elYF=$('#yFrom'),elYT=$('#yTo'),elSort=$('#sort');
+const elQ=$('#q'),elScope=$('#scope'),elFuzzy=$('#fuzzy'),elYF=$('#yFrom'),elYT=$('#yTo'),elSort=$('#sort'),elLang=$('#lang');
 const elList=$('#list'),elCount=$('#count'),elMore=$('#more'),elDetail=$('#detail'),elHint=$('#modeHint');
 const elStats=$('#stats'),elHist=$('#hist'),elToast=$('#toast');
 
-const state={q:'',scope:'all',fuzzy:true,yf:null,yt:null,sort:'rel',favOnly:false,page:1,size:30,sel:null,histYear:null};
+const state={q:'',scope:'all',fuzzy:true,yf:null,yt:null,sort:'rel',favOnly:false,page:1,size:30,sel:null,histYear:null,lang:'Hant'};
 let lastResults=[],lastScored=[];
 
 /* ---------- 检索 ---------- */
@@ -460,6 +516,10 @@ function renderDetail(){
 }
 
 /* ---------- 综合刷新 ---------- */
+function localizeDynamic(){
+  localize(elList);localize(elMore);localize(elCount);localize(elHint);
+  localize(elDetail);localize(elHist);localize($('#histNote'));localize($('#legend'));
+}
 function renderAll(reset){
   if(reset)state.page=1;
   search();
@@ -468,6 +528,7 @@ function renderAll(reset){
   else if(reset&&lastResults.length)state.sel=lastResults[0].id;
   renderDetail();
   renderHist();
+  localizeDynamic();
   syncHash();
 }
 
@@ -497,7 +558,7 @@ function download(name,text){
   const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),2000);
 }
-function toast(msg){elToast.textContent=msg;elToast.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(()=>elToast.classList.remove('on'),1800);}
+function toast(msg){elToast.textContent=(state.lang==='Hans'?t2s(msg):msg);elToast.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(()=>elToast.classList.remove('on'),1800);}
 function exportOne(p){
   download('qianlong-'+(p.t||'poem')+'.json',JSON.stringify({meta:{exported:new Date().toISOString()},poems:[p]},null,2));
 }
@@ -524,6 +585,7 @@ function syncHash(){
   if(state.yt!=null)h.set('yt',state.yt);
   if(state.sort!=='rel')h.set('sort',state.sort);
   if(state.histYear!=null)h.set('hy',state.histYear);
+  if(state.lang!=='Hant')h.set('l',state.lang);
   if(state.sel)h.set('id',state.sel);
   const s=h.toString();
   try{ history.replaceState(null,'',s?('#'+s):location.pathname); }catch(e){}
@@ -537,6 +599,7 @@ function readHash(){
   if(h.has('yt'))state.yt=+h.get('yt');
   if(h.has('sort'))state.sort=h.get('sort');
   if(h.has('hy'))state.histYear=+h.get('hy');
+  if(h.has('l'))state.lang=normLang(h.get('l'));
   if(h.has('id'))state.sel=h.get('id');
   elQ.value=state.q;elScope.value=state.scope;elFuzzy.value=state.fuzzy?'1':'0';
   elYF.value=state.yf??'';elYT.value=state.yt??'';elSort.value=state.sort;
@@ -563,6 +626,7 @@ elQ.addEventListener('input',()=>{clearTimeout(tmr);tmr=setTimeout(()=>{state.q=
 elScope.addEventListener('change',()=>{state.scope=elScope.value;renderAll(true);});
 elFuzzy.addEventListener('change',()=>{state.fuzzy=elFuzzy.value==='1';renderAll(true);});
 elSort.addEventListener('change',()=>{state.sort=elSort.value;renderAll(true);});
+elLang.addEventListener('change',()=>{state.lang=normLang(elLang.value);applyLang();});
 elYF.addEventListener('input',()=>{state.yf=elYF.value?+elYF.value:null;renderAll(true);});
 elYT.addEventListener('input',()=>{state.yt=elYT.value?+elYT.value:null;renderAll(true);});
 $('#quick').addEventListener('click',e=>{
@@ -615,6 +679,7 @@ function selectPoem(id){
   const p=SRC().find(x=>x.id===id);
   renderDetail();
   renderList();
+  localizeDynamic();
   syncHash();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -655,10 +720,19 @@ $('#impFile').addEventListener('change',ev=>{
 (function init(){
   // 主题
   const th=localStorage.getItem('ql_theme');if(th)document.documentElement.dataset.theme=th;
+  // 语言（localStorage 默认，读入后由 readHash 以 hash 优先覆盖）
+  state.lang=normLang(localStorage.getItem('ql_lang'));
+  document.documentElement.lang=state.lang==='Hans'?'zh-Hans':'zh-Hant';
   // 字段压缩名已在构建期完成：t/c/y/yt/ji/j/gz/tg/src/nt/prov
   $('#ver').textContent=META.version;$('#built').textContent=META.built;
   $('#brandCount').textContent=SRC().length;
-  renderQuick();readHash();computeBins();renderAll(true);
+  renderQuick();
+  readHash();
+  elLang.value=state.lang;
+  computeBins();
+  renderAll(true);         // 首渲：依繁体正本，Hans 态在 renderAll 末尾统一 T2S
+  snapStatic();            // 抓取静态界面文字的繁体正本快照
+  applyStatic();           // 按最终语言显示静态区
 })();
 })();
 </script>
