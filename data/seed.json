@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "subject": "清高宗·爱新觉罗·弘历（乾隆帝）御制诗",
+    "version": "0.2.0",
+    "edition": "《清高宗御制诗集》钦定四库全书本（初集/二集/三集/四集/五集）",
+    "note": "经人工核对、逐条标注出处的精选语料。全文约四万一千八百首，可由 tools/ 中的抓取与导入工具按分卷并入本库。"
+  },
+  "poems": [
+    {
+      "id": "seed-0001",
+      "title": "讀貞觀政要",
+      "content": "懿德嘉言在簡編憂勤想見廿三年燭情已自同懸鏡從諫端知勝轉圜房杜有容能讓直魏王無事不繩愆高山景仰心何限字字香生翰墨筵",
+      "ji": "初集",
+      "juan": 1,
+      "ganzhi": ["丙辰", "丁巳", "戊午"],
+      "year": 1736,
+      "year_text": "乾隆元年（丙辰）",
+      "tags": ["读书", "治国", "七律"],
+      "source": "《御製詩初集》卷一",
+      "provenance": {
+        "source_of_record": "钦定四库全书《御製詩集》KR4f0005 卷一（Kanseki Repository 公开文本）",
+        "url": "https://www.kanripo.org/text/KR4f0005/001",
+        "retrieved": "2026-09-25",
+        "cross_check": "故宫博物院《重估乾隆帝文学作品与文化政策的地位和意义》"
+      },
+      "note": "读《贞观政要》有感，咏唐太宗纳谏之德。"
+    },
+    {
+      "id": "seed-0002",
+      "title": "獨居",
+      "content": "靜幾明窗遠絕塵花香鳥語總天真每殷已溺已飢念難作無為無事人",
+      "ji": "初集",
+      "juan": 1,
+      "ganzhi": ["丙辰", "丁巳", "戊午"],
+      "year": 1736,
+      "year_text": "乾隆元年（丙辰）",
+      "tags": ["心志", "七绝"],
+      "source": "《御製詩初集》卷一",
+      "provenance": {
+        "source_of_record": "钦定四库全书《御製詩集》KR4f0005 卷一",
+        "url": "https://www.kanripo.org/text/KR4f0005/001",
+        "retrieved": "2026-09-25"
+      },
+      "note": ""
+    },
+    {
+      "id": "seed-0003",
+      "title": "圓明園四十景詩·杏花春館",
+      "content": "霏香紅雪韻空庭肯讓寒梅占膽瓶最愛花光傳藝苑每乘月令驗農經為梁謾說仙人館載酒偏宜小隱亭夜半一犁春雨足朝來吟屐樹邊停",
+      "ji": "初集",
+      "juan": 0,
+      "ganzhi": [],
+      "year": 1744,
+      "year_text": "乾隆九年（甲子）",
+      "tags": ["圆明园", "御园", "写景", "七律"],
+      "source": "《御製圓明園四十景詩》",
+      "provenance": {
+        "source_of_record": "北京市文物局《杏花、田园与耕织文化——圆明园“杏花春馆”意境初探》所引《御製圓明園四十景詩》",
+        "url": "https://wwj.beijing.gov.cn/bjww/362760/362770/743833576/index.html",
+        "retrieved": "2026-09-25"
+      },
+      "note": "圆明园四十景之一『杏花春馆』题咏。"
+    },
+    {
+      "id": "seed-0004",
+      "title": "賦得坦坦蕩蕩",
+      "content": "演漾披琳沼豁庨敞網軒息躬喜疏朗游目鮮囂煩俯仰四臨具括包一理存無私參義府順應滌情源玩物寧堪貴甄心略可論嘉茲君子德倬彼聖人言",
+      "ji": "三集",
+      "juan": 0,
+      "ganzhi": ["辛巳"],
+      "year": 1761,
+      "year_text": "乾隆二十六年（辛巳）",
+      "tags": ["命題", "义理", "五排"],
+      "source": "《御製詩三集》",
+      "provenance": {
+        "source_of_record": "中国人民大学清史研究所〈清代皇家园林研究中心〉所引《御製詩》",
+        "url": "http://iqh.ruc.edu.cn/old/qdhjylyjzx/xszl/lswh/062446f497954f2186c38726c8775ecc.htm",
+        "retrieved": "2026-09-25"
+      },
+      "note": "题圆明园『坦坦荡荡』景。"
+    },
+    {
+      "id": "seed-0005",
+      "title": "詠均窯水盂",
+      "content": "紫土陶成鐵足三寓言得一此中涵易辭本契退藏理宋詔胡誇切事談",
+      "ji": "五集",
+      "juan": 84,
+      "ganzhi": ["癸丑"],
+      "year": 1793,
+      "year_text": "乾隆五十八年（癸丑）",
+      "tags": ["咏物", "陶瓷", "七绝"],
+      "source": "《御製詩五集》卷八十四",
+      "provenance": {
+        "source_of_record": "故宫博物院《乾隆御制诗瓷器考论》所引《清高宗御制诗集五集》卷八十四",
+        "url": "https://www.dpm.org.cn/explode/others/251351.html",
+        "retrieved": "2026-09-25"
+      },
+      "note": "咏钧窑水盂。"
+    },
+    {
+      "id": "seed-0006",
+      "title": "山中（摘句）",
+      "content": "鳥似有情依客語鹿知無害向人親",
+      "ji": "四集",
+      "juan": 83,
+      "ganzhi": [],
+      "year": 0,
+      "year_text": "乾隆年间",
+      "tags": ["避暑山庄", "写景", "摘句"],
+      "source": "《御製詩四集》卷八十三",
+      "provenance": {
+        "source_of_record": "故宫博物院《清代避暑山庄里的动物》所引《清高宗御制诗集四集》卷八十三",
+        "url": "https://www.dpm.org.cn/Uploads/File/2020/04/07/u5e8c3d73e0222.pdf",
+        "retrieved": "2026-09-25"
+      },
+      "note": "避暑山庄即景摘句。"
+    }
+  ]
+}

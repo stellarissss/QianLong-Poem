@@ -1,0 +1,8 @@
+# 抓取中间产物（可由 tools/fetch-kanripo.js 复现）
+.work/
+# 解析/调试临时输出
+out*.json
+*.log
+# 系统文件
+.DS_Store
+Thumbs.db
