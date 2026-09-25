@@ -1,5 +1,7 @@
 # 抓取中间产物（可由 tools/fetch-kanripo.js 复现）
 .work/
+# 构建期依赖（npm install 复现）
+node_modules/
 # 解析/调试临时输出
 out*.json
 *.log

@@ -1,0 +1,23 @@
+{
+  "name": "qianlong-poems",
+  "version": "1.0.0",
+  "description": "清高宗愛新覺羅·弘曆（乾隆帝，1711–1799）一生作詩逾四萬首，為歷史上存詩最多的帝王。其詩以編年為次，收於《欽定四庫全書》集部《御製詩集》初集、二集、三集、四集、五集（另有《樂善堂全集》及餘集）。",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stellarissss/QianLong-Poem.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/stellarissss/QianLong-Poem/issues"
+  },
+  "homepage": "https://github.com/stellarissss/QianLong-Poem#readme",
+  "devDependencies": {
+    "pinyin-pro": "^3.29.4"
+  }
+}

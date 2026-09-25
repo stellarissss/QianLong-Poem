@@ -119,6 +119,13 @@ main{display:grid;grid-template-columns:minmax(360px,440px) 1fr;gap:18px;align-i
   padding:26px 20px;font-size:20px}
 .poem.vertical .ln{display:block;text-indent:0;margin:0 2px}
 .poem.vertical .ln.alt{text-indent:0}
+/* 注音／異體括注：ruby 附注於字上或字側，不攪動行距與複製文本 */
+.rb{ruby-position:over;ruby-align:center}
+.rb rt{font-family:var(--sans);font-size:.42em;font-weight:400;letter-spacing:0;color:var(--muted);line-height:1.15}
+.dtitle .rb rt{font-size:.36em}
+.poem .rb rt{font-size:.4em}
+.poem.vertical .rb rt{font-size:.42em}
+[data-theme="dark"] .rb rt{color:var(--ink-2)}
 .sec{margin-top:20px}
 .sec h3{font-size:12px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;margin:0 0 8px;font-weight:600}
 .kv{display:grid;grid-template-columns:78px 1fr;gap:6px 12px;font-size:13px;color:var(--ink-2)}
@@ -167,6 +174,7 @@ footer{border-top:1px solid var(--line);padding:18px 0 40px;color:var(--muted);f
         <kbd>/</kbd>
       </div>
       <div class="tools">
+        <button class="btn ghost" id="pyBtn" title="漢語拼音注音（詩題與詩句）" aria-pressed="false">拼音</button>
         <button class="btn ghost" id="statsBtn" title="統計">統計</button>
         <button class="btn ghost" id="themeBtn" title="深色模式" aria-label="深色模式">◐</button>
       </div>
@@ -256,17 +264,26 @@ footer{border-top:1px solid var(--line);padding:18px 0 40px;color:var(--muted);f
 
 <script id="DB" type="application/json">/*__DB__*/</script>
 <script id="FOLD" type="application/json">/*__FOLD__*/</script>
+<script id="VAR" type="application/json">/*__VAR__*/</script>
+<script>/*__PINYIN__*/</script>
 <script>
 (function(){
 'use strict';
 const META={version:"__VERSION__",built:"__BUILT__",count:__COUNT__};
+/* ---------- 异体字表（异体 → 标准简体），供简体显示与检索折字 ---------- */
+const VAR=new Map();
+(function(){
+  let pairs=[];try{pairs=JSON.parse(document.getElementById('VAR').textContent||'[]');}catch(e){pairs=[];}
+  for(const p of pairs)if(p&&p.length===2)VAR.set(p[0],p[1]);
+})();
+
 /* ---------- 繁简折叠表（T→S），以码点对数组载入，避免代理对被截断 ---------- */
 const FOLD=new Map();
 (function(){
   let pairs=[];try{pairs=JSON.parse(document.getElementById('FOLD').textContent||'[]');}catch(e){pairs=[];}
   for(const p of pairs)if(p&&p.length===2)FOLD.set(p[0],p[1]);
 })();
-function foldOne(ch){return FOLD.get(ch)||ch;}
+function foldOne(ch){const v=VAR.get(ch);return v?(FOLD.get(v)||v):(FOLD.get(ch)||ch);}
 function fold(str){let o='';for(const ch of str)o+=foldOne(ch);return o;}
 
 /* ---------- 界面语言：全文繁→简显示转换 ---------- */
@@ -279,8 +296,71 @@ function t2s(str){
     o+=FOLD.get(c)||c;}
   return o;
 }
-/* 字符串级 T2S（标识符/HTML 实体安全：ASCII 不变） */
-function t2sStr(s){return s&&/[\u3400-\u9FFF\uff00-\uffef]/.test(s)?t2s(s):s;}
+function T(s){return state.lang==='Hans'?t2s(s):s;}
+
+/* ---------- 逐字渲染：繁简转换、异体括注、拼音注音 ---------- */
+/* 拼音：逐字取音。pinyin-pro 未收录的生僻异体常原样回显，此时改标其正字之音。 */
+function pyOf(text){
+  if(!state.pinyin||!window.pinyinPro)return null;
+  try{
+    const chars=[...text];
+    const a=window.pinyinPro.pinyin(text,{type:'array',toneType:'symbol'});
+    if(!a||a.length!==chars.length)return null;
+    const one=s=>{try{const b=window.pinyinPro.pinyin(s,{type:'array',toneType:'symbol'});return (b&&b[0]&&b[0]!==s)?b[0]:'';}catch(e){return '';}};
+    return a.map((p,i)=>{
+      const ch=chars[i];
+      if(p&&p!==ch)return p;
+      const alt=VAR.get(ch)||foldOne(ch);
+      return alt===ch?'':one(alt);
+    });
+  }catch(e){return null;}
+}
+/* 供复制/导出：简体态下按显示规则折字（异体→标准简体，繁→简） */
+function plainText(str){
+  if(state.lang!=='Hans')return str;
+  let o='';for(const ch of str)o+=(KEEP_TS.has(ch)?ch:foldOne(ch));
+  return o;
+}
+/* 单字 → HTML：简体态下异体字折为标准简体；注明 annotate 时以括注回标异体原文 */
+function charHTML(ch,py,annotate){
+  const hans=state.lang==='Hans';
+  const v=hans?VAR.get(ch):null;
+  const base=hans?(v||(KEEP_TS.has(ch)?ch:foldOne(ch))):ch;
+  let rt=py||'';
+  if(v&&annotate)rt=(rt?rt+' ':'')+'（'+ch+'）';
+  if(!rt)return esc(base);
+  return '<ruby class="rb">'+esc(base)+'<rt>'+esc(rt)+'</rt></ruby>';
+}
+function charRun(src,hits,py,annotate){
+  let html='',open=false,off=0,i=0;
+  for(const ch of src){
+    let on=false;
+    if(hits)for(let k=off;k<off+ch.length;k++)if(hits.has(k)){on=true;break;}
+    if(on&&!open){html+='<mark>';open=true;}else if(!on&&open){html+='</mark>';open=false;}
+    html+=charHTML(ch,py?py[i]:null,annotate);
+    off+=ch.length;i++;
+  }
+  if(open)html+='</mark>';
+  return html;
+}
+/* 命中位置（返回源串下标集合；正则以原文匹配，其余繁简折叠后匹配） */
+function hitsOfText(src){
+  const raw=state.q.trim();
+  if(!raw)return null;
+  if(state.scope==='regex'){
+    let re;try{re=new RegExp(raw,'gu');}catch(e){return null;}
+    const hits=new Set();let m;
+    while((m=re.exec(src))){for(let k=m.index;k<m.index+m[0].length;k++)hits.add(k);if(!m[0])re.lastIndex++;}
+    return hits.size?hits:null;
+  }
+  const q=fkey(raw);if(!q)return null;
+  const map=[];let ff='';
+  for(let i=0;i<src.length;i++)for(const c of foldOne(src[i]).toLowerCase()){ff+=c;map.push(i);}
+  const hits=new Set();
+  if(state.fuzzy){const r=subseq(ff,q);if(r)r.hits.forEach(i=>hits.add(map[i]));}
+  else{let i=0;while((i=ff.indexOf(q,i))>=0){for(let k=i;k<i+q.length;k++)hits.add(map[k]);i+=q.length;}}
+  return hits.size?hits:null;
+}
 
 /* 动态渲染区 */
 const DYN_IDS=['list','detail','hist','more','count','modeHint','histNote','legend','toast'];
@@ -340,11 +420,11 @@ function foldInfo(p,field){
 
 /* ---------- 表单要素 ---------- */
 const $=(s)=>document.querySelector(s);
-const elQ=$('#q'),elScope=$('#scope'),elFuzzy=$('#fuzzy'),elYF=$('#yFrom'),elYT=$('#yTo'),elSort=$('#sort'),elLang=$('#lang');
+const elQ=$('#q'),elScope=$('#scope'),elFuzzy=$('#fuzzy'),elYF=$('#yFrom'),elYT=$('#yTo'),elSort=$('#sort'),elLang=$('#lang'),elPy=$('#pyBtn');
 const elList=$('#list'),elVpad=$('#vpad'),elVwin=$('#vwin'),elCount=$('#count'),elMore=$('#more'),elDetail=$('#detail'),elHint=$('#modeHint');
 const elStats=$('#stats'),elHist=$('#hist'),elToast=$('#toast');
 
-const state={q:'',scope:'all',fuzzy:true,yf:null,yt:null,sort:'rel',favOnly:false,sel:null,histYear:null,lang:'Hant',vertical:false};
+const state={q:'',scope:'all',fuzzy:true,yf:null,yt:null,sort:'rel',favOnly:false,sel:null,histYear:null,lang:'Hant',vertical:false,pinyin:false};
 let lastResults=[],lastScored=[];
 const ROW_H=118;
 
@@ -416,29 +496,10 @@ function search(){
   lastScored=out;lastResults=out.map(o=>o.p);
 }
 
-/* ---------- 高亮 ---------- */
-function hl(p,field,q,fuzzy){
-  const src=p[field]||'';
-  if(!q&&!state.q.trim())return esc(src);
-  const raw=state.q.trim();
-  if(state.scope==='regex'){
-    try{const re=new RegExp('('+raw+')','gu');return esc(src).replace(re,'<mark>$1</mark>');}catch(e){return esc(src);}
-  }
-  const {f,map}=foldInfo(p,field);
-  const hits=new Set();
-  if(fuzzy){const r=subseq(f,q);if(r)r.hits.forEach(i=>hits.add(map[i]));}
-  else{let i=0;while((i=f.indexOf(q,i))>=0){for(let k=i;k<i+q.length;k++)hits.add(map[k]);i+=q.length;}}
-  if(!hits.size)return esc(src);
-  let html='',open=false;
-  for(let i=0;i<src.length;i++){
-    const on=hits.has(i);
-    if(on&&!open){html+='<mark>';open=true;}else if(!on&&open){html+='</mark>';open=false;}
-    html+=esc(src[i]);
-  }
-  if(open)html+='</mark>';
-  return html;
-}
+/* ---------- 高亮（逐字渲染器之上） ---------- */
 function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function hl(p,field){const src=p[field]||'';return charRun(src,hitsOfText(src),null,false);}
+function hlSeg(seg){return charRun(seg,hitsOfText(seg),null,false);}
 
 function meterOf(n){
   if(n>=20){for(const m of [7,5,4,6])if(n%m===0)return m;}
@@ -454,32 +515,17 @@ function layout(content){
 }
 function snippet2(p){
   const plain=p.c||'';
-  const q=fkey(state.q.trim());
-  if(!q||state.scope==='regex'||state.scope==='year'){
-    const s=plain.slice(0,40);
-    return {html:esc(s)+(plain.length>40?'…':'')};
-  }
+  const raw=state.q.trim();
+  const q=raw?fkey(raw):'';
+  const head=(s)=>({html:charRun(s,null,null,false)+(plain.length>s.length?'…':'')});
+  if(!raw||state.scope==='regex'||state.scope==='year')return head(plain.slice(0,40));
   const {f,map}=foldInfo(p,'c');
   let start=-1;
-  const idx=f.indexOf(q);
-  if(idx>=0)start=map[idx];
-  else if(state.fuzzy){const r=subseq(f,q);if(r)start=map[r.hits[0]];}
-  if(start<0){const s=plain.slice(0,40);return {html:esc(s)+(plain.length>40?'…':'')};}
-  const a=Math.max(0,start-12),b=Math.min(plain.length,start+60);
-  return {html:(a>0?'…':'')+hlSeg(plain.slice(a,b),q,state.fuzzy)+(b<plain.length?'…':'')};
-}
-function hlSeg(seg,q,fuzzy){
-  const f=fold(seg).toLowerCase();const map=[];
-  let ff='';for(let i=0;i<seg.length;i++)for(const c of foldOne(seg[i]).toLowerCase()){ff+=c;map.push(i);}
-  const hits=new Set();
-  if(fuzzy){const r=subseq(ff,q);if(r)r.hits.forEach(i=>hits.add(map[i]));}
-  else{let i=0;while((i=ff.indexOf(q,i))>=0){for(let k=i;k<i+q.length;k++)hits.add(map[k]);i+=q.length;}}
-  let html='',open=false;
-  for(let i=0;i<seg.length;i++){const on=hits.has(i);
-    if(on&&!open){html+='<mark>';open=true;}else if(!on&&open){html+='</mark>';open=false;}
-    html+=esc(seg[i]);}
-  if(open)html+='</mark>';
-  return html;
+  if(q){const idx=f.indexOf(q);if(idx>=0)start=map[idx];}
+  if(start<0&&state.fuzzy&&q){const r=subseq(f,q);if(r)start=map[r.hits[0]];}
+  if(start<0)return head(plain.slice(0,40));
+  const a=Math.max(0,start-12),b=Math.min(plain.length,start+60),seg=plain.slice(a,b);
+  return {html:(a>0?'…':'')+hlSeg(seg)+(b<plain.length?'…':'')};
 }
 
 /* ---------- 列表窗口化渲染（固定行高，仅渲染可见行） ---------- */
@@ -487,12 +533,12 @@ function itemHTML(p){
   const sn=snippet2(p);
   const y=p.y?p.y:'—';
   return '<div class="item'+(state.sel===p.id?' on':'')+'" data-id="'+p.id+'" role="option" aria-selected="'+(state.sel===p.id)+'" tabindex="0">'+
-    '<div class="t">'+hl(p,'t',fkey(state.q.trim()),state.fuzzy)+'</div>'+
+    '<div class="t">'+hl(p,'t')+'</div>'+
     '<div class="s">'+sn.html+'</div>'+
     '<div class="m"><span class="tag y">'+y+'</span>'+
-    (p.ji?'<span class="tag">'+esc(p.ji)+(p.j?('卷'+p.j):'')+'</span>':'')+
-    (p.sr?'<span class="tag">組詩</span>':'')+
-    (p.tg&&p.tg.length?'<span class="tag">'+esc(p.tg[0])+'</span>':'')+
+    (p.ji?'<span class="tag">'+esc(T(p.ji))+(p.j?('卷'+p.j):'')+'</span>':'')+
+    (p.sr?'<span class="tag">'+esc(T('組詩'))+'</span>':'')+
+    (p.tg&&p.tg.length?'<span class="tag">'+esc(T(p.tg[0]))+'</span>':'')+
     (FAV.has(p.id)?'<span class="tag">★</span>':'')+'</div></div>';
 }
 let vTimer=null;
@@ -507,21 +553,21 @@ function renderWindow(){
   elVpad.style.height=(total*ROW_H)+'px';
   let html='';
   for(let i=start;i<end;i++)html+=itemHTML(lastResults[i]);
-  html=state.lang==='Hans'?t2sStr(html):html;
   elVwin.style.transform='translateY('+(start*ROW_H)+'px)';
   elVwin.innerHTML=html;
 }
 function renderList(){
   const total=lastResults.length;
+  elCount.innerHTML=T('共')+' <b>'+total+'</b> '+T('篇');
   if(!total){
-    elVwin.innerHTML='<div class="empty">沒有符合條件的篇目<br><span class="hint">可嘗試開啟「模糊查找」或放寬年份範圍</span></div>';
+    elVwin.innerHTML='<div class="empty">'+T('沒有符合條件的篇目')+'<br><span class="hint">'+T('可嘗試開啟「模糊查找」或放寬年份範圍')+'</span></div>';
     elVpad.style.height='auto';
-    elMore.innerHTML='共 <b>0</b> 篇';
+    elMore.innerHTML=T('共')+' <b>0</b> '+T('篇');
     elHint.textContent='';
     return;
   }
-  elMore.innerHTML='已顯示前 <b>'+Math.min(total,500)+'</b> ／共 <b>'+total+'</b> 篇 · 請在列表中捲動查看更多';
-  elHint.textContent=state.q.trim()?(state.fuzzy?'模糊':'精確')+'·'+({all:'綜合',title:'詩題',content:'詩句',year:'年份',regex:'正則'}[state.scope]):'';
+  elMore.innerHTML=T('已顯示前')+' <b>'+Math.min(total,500)+'</b> ／'+T('共')+' <b>'+total+'</b> '+T('篇 · 請在列表中捲動查看更多');
+  elHint.textContent=state.q.trim()?(T(state.fuzzy?'模糊':'精確')+'·'+T({all:'綜合',title:'詩題',content:'詩句',year:'年份',regex:'正則'}[state.scope])):'';
   elList.scrollTop=elList.scrollTop||0;
   renderWindow();
 }
@@ -529,44 +575,43 @@ function renderList(){
 /* ---------- 详情渲染 ---------- */
 function renderDetail(){
   const p=SRC().find(x=>x.id===state.sel);
-  if(!p){elDetail.innerHTML='<div class="empty" style="padding:80px 20px">從左側選擇一篇以查看全文<div class="hint" style="margin-top:10px">或按 <kbd>R</kbd> 隨機、<kbd>D</kbd> 每日一詩</div></div>';return;}
+  if(!p){elDetail.innerHTML='<div class="empty" style="padding:80px 20px">'+T('從左側選擇一篇以查看全文')+'<div class="hint" style="margin-top:10px">'+T('或按')+' <kbd>R</kbd> '+T('隨機、')+'<kbd>D</kbd> '+T('每日一詩')+'</div></div>';return;}
   const rows=layout(p.c);
-  const q=fkey(state.q.trim());
-  const bodyHtml=rows.map(r=>'<span class="ln'+(r.alt?' alt':'')+'">'+(state.q.trim()?hlSeg(r.t,q,state.fuzzy):esc(r.t))+'</span>').join('');
+  const bodyHtml=rows.map(r=>'<span class="ln'+(r.alt?' alt':'')+'">'+charRun(r.t,hitsOfText(r.t),pyOf(r.t),true)+'</span>').join('');
   const gz=(p.gz&&p.gz.length)?p.gz.join('、'):'—';
   const prov=p.prov||{};
   elDetail.innerHTML='<div class="dbody">'+
-    '<h2 class="dtitle">'+(state.q.trim()?hl(p,'t',q,state.fuzzy):esc(p.t))+'</h2>'+
+    '<h2 class="dtitle">'+charRun(p.t,hitsOfText(p.t),pyOf(p.t),true)+'</h2>'+
     '<div class="dmeta">'+
-      '<span class="tag y">'+(p.y||'年份未詳')+'</span>'+
-      (p.ji?'<span class="tag">'+esc(p.ji)+(p.j?('·卷'+p.j):'')+'</span>':'')+
-      '<span class="tag">'+p.c.length+' 字</span>'+
-      (meterOf(p.c.length)?'<span class="tag">'+meterOf(p.c.length)+'言</span>':'')+
-      (p.tg||[]).map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+
+      '<span class="tag y">'+(p.y||T('年份未詳'))+'</span>'+
+      (p.ji?'<span class="tag">'+esc(T(p.ji))+(p.j?('·卷'+p.j):'')+'</span>':'')+
+      '<span class="tag">'+p.c.length+' '+T('字')+'</span>'+
+      (meterOf(p.c.length)?'<span class="tag">'+meterOf(p.c.length)+T('言')+'</span>':'')+
+      (p.tg||[]).map(t=>'<span class="tag">'+esc(T(t))+'</span>').join('')+
     '</div>'+
     '<div class="poem'+(state.vertical?' vertical':'')+'" id="poemBody">'+bodyHtml+'</div>'+
-    (p.nt?'<div class="sec"><h3>題解／小序</h3><div style="color:var(--ink-2)">'+esc(p.nt)+'</div></div>':'')+
-    '<div class="sec"><h3>著錄</h3><dl class="kv">'+
-      '<dt>紀年</dt><dd>'+esc(p.yt||'—')+'（干支 '+esc(gz)+'）</dd>'+
-      (p.sr?'<dt>組詩</dt><dd>'+esc(p.sr)+'</dd>':'')+
-      '<dt>出處</dt><dd>'+esc(prov.source_of_record||p.src||'—')+'</dd>'+
-      (prov.url?'<dt>原文</dt><dd><a href="'+esc(prov.url)+'" target="_blank" rel="noopener">'+esc(prov.url)+'</a></dd>':'')+
-      (prov.retrieved?'<dt>核校</dt><dd>'+esc(prov.retrieved)+'</dd>':'')+
+    (p.nt?'<div class="sec"><h3>'+T('題解／小序')+'</h3><div style="color:var(--ink-2)">'+esc(T(p.nt))+'</div></div>':'')+
+    '<div class="sec"><h3>'+T('著錄')+'</h3><dl class="kv">'+
+      '<dt>'+T('紀年')+'</dt><dd>'+esc(T(p.yt||'—'))+'（'+T('干支')+' '+esc(T(gz))+'）</dd>'+
+      (p.sr?'<dt>'+T('組詩')+'</dt><dd>'+esc(T(p.sr))+'</dd>':'')+
+      '<dt>'+T('出處')+'</dt><dd>'+esc(T(prov.source_of_record||p.src||'—'))+'</dd>'+
+      (prov.url?'<dt>'+T('原文')+'</dt><dd><a href="'+esc(prov.url)+'" target="_blank" rel="noopener">'+esc(prov.url)+'</a></dd>':'')+
+      (prov.retrieved?'<dt>'+T('核校')+'</dt><dd>'+esc(prov.retrieved)+'</dd>':'')+
     '</dl></div>'+
     '<div class="acts">'+
-      '<button class="btn" id="vBtn" title="橫排／直排">'+(state.vertical?'橫排':'堅排')+'</button>'+
-      '<button class="btn primary" id="copyBtn">複製詩文</button>'+
-      '<button class="btn" id="favTog">'+(FAV.has(p.id)?'★ 已收藏':'☆ 收藏')+'</button>'+
-      '<button class="btn" id="linkBtn">複製連結</button>'+
-      '<button class="btn ghost" id="prevBtn">上一篇</button>'+
-      '<button class="btn ghost" id="nextBtn">下一篇</button>'+
+      '<button class="btn" id="vBtn" title="'+T('橫排／直排')+'">'+T(state.vertical?'橫排':'堅排')+'</button>'+
+      '<button class="btn primary" id="copyBtn">'+T('複製詩文')+'</button>'+
+      '<button class="btn" id="favTog">'+(FAV.has(p.id)?'★ '+T('已收藏'):'☆ '+T('收藏'))+'</button>'+
+      '<button class="btn" id="linkBtn">'+T('複製連結')+'</button>'+
+      '<button class="btn ghost" id="prevBtn">'+T('上一篇')+'</button>'+
+      '<button class="btn ghost" id="nextBtn">'+T('下一篇')+'</button>'+
     '</div></div>';
 }
 
 /* ---------- 综合刷新 ---------- */
 function localizeDynamic(){
-  localize(elList);localize(elVpad);localize(elVwin);localize(elMore);localize(elCount);localize(elHint);
-  localize(elDetail);localize(elHist);localize($('#histNote'));localize($('#legend'));localize($('#statGrid'));
+  localize(elMore);localize(elCount);localize(elHint);
+  localize($('#histNote'));localize($('#legend'));localize($('#statGrid'));
 }
 function renderAll(reset){
   if(reset&&lastResults.length)elList.scrollTop=0;
@@ -638,6 +683,7 @@ function syncHash(){
   if(state.histYear!=null)h.set('hy',state.histYear);
   if(state.lang!=='Hant')h.set('l',state.lang);
   if(state.vertical)h.set('v','1');
+  if(state.pinyin)h.set('py','1');
   if(state.sel)h.set('id',state.sel);
   const s=h.toString();
   try{ history.replaceState(null,'',s?('#'+s):location.pathname); }catch(e){}
@@ -653,6 +699,7 @@ function readHash(){
   if(h.has('hy'))state.histYear=+h.get('hy');
   if(h.has('l'))state.lang=normLang(h.get('l'));
   if(h.has('v'))state.vertical=h.get('v')==='1';
+  if(h.has('py'))state.pinyin=h.get('py')==='1';
   if(h.has('id'))state.sel=h.get('id');
   elQ.value=state.q;elScope.value=state.scope;elFuzzy.value=state.fuzzy?'1':'0';
   elYF.value=state.yf??'';elYT.value=state.yt??'';elSort.value=state.sort;
@@ -694,6 +741,11 @@ $('#resetBtn').addEventListener('click',()=>{
 $('#favBtn').addEventListener('click',()=>{state.favOnly=!state.favOnly;$('#favBtn').classList.toggle('on',state.favOnly);renderAll(true);});
 $('#randBtn').addEventListener('click',pickRandom);
 $('#dayBtn').addEventListener('click',pickDaily);
+elPy.addEventListener('click',()=>{
+  state.pinyin=!state.pinyin;store('ql_py',state.pinyin?'1':'0');
+  syncPyBtn();renderDetail();syncHash();
+});
+function syncPyBtn(){elPy.classList.toggle('on',state.pinyin);elPy.setAttribute('aria-pressed',state.pinyin?'true':'false');}
 $('#statsBtn').addEventListener('click',()=>{elStats.classList.toggle('on');$('#statsBtn').classList.toggle('on');});
 $('#themeBtn').addEventListener('click',()=>{
   const t=document.documentElement.dataset.theme==='dark'?'light':'dark';
@@ -718,7 +770,7 @@ elDetail.addEventListener('click',async e=>{
   const id=e.target.id;
   if(id==='vBtn'){state.vertical=!state.vertical;store('ql_v',state.vertical?'1':'0');renderDetail();localizeDynamic();syncHash();}
   if(id==='copyBtn'){const p=SRC().find(x=>x.id===state.sel);
-    const txt=state.vertical?p.c:p.t+'\n\n'+p.c;
+    const txt=(state.vertical?'':plainText(p.t)+'\n\n')+plainText(p.c);
     const ok=await copyText(txt);toast(ok?'已複製詩文':'複製失敗（瀏覽器受限）');}
   if(id==='favTog'){toggleFav(state.sel);renderDetail();localizeDynamic();}
   if(id==='linkBtn'){const ok=await copyText(location.href);toast(ok?'已複製連結':'複製失敗（瀏覽器受限）');}
@@ -787,12 +839,14 @@ $('#impFile').addEventListener('change',ev=>{
   const th=localStorage.getItem('ql_theme');if(th)document.documentElement.dataset.theme=th;
   state.lang=normLang(localStorage.getItem('ql_lang'));
   state.vertical=localStorage.getItem('ql_v')==='1';
-  document.documentElement.lang=state.lang==='Hans'?'zh-Hans':'zh-Hant';
+  state.pinyin=localStorage.getItem('ql_py')==='1';
   $('#ver').textContent=META.version;$('#built').textContent=META.built;
   $('#brandCount').textContent=SRC().length;
   renderQuick();
   readHash();
   elLang.value=state.lang;
+  document.documentElement.lang=state.lang==='Hans'?'zh-Hans':'zh-Hant';
+  syncPyBtn();
   computeBins();
   renderAll(false);
   snapStatic();

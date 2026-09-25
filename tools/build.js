@@ -7,15 +7,19 @@
  *
  * 产出：
  *   data/poems.json          完整数据库（长字段名，便于二次利用）
- *   dist/qianlong-poems.html 单文件查看器（内嵌数据与繁简折叠表，双击即用）
+ *   dist/qianlong-poems.html 单文件查看器（内嵌数据、繁简折叠表、异体字表与拼音库，双击即用）
  *   dist/qianlong-poems.json 查看器所用精简数据库（压缩字段）
+ *
+ * 依赖 .work/lexicon/ 下的开源词典（node tools/fetch-lexicon.js）与 pinyin-pro（npm install）。
  */
 const fs = require('fs');
 const path = require('path');
 const { parseAll } = require('./import.js');
+const { buildVariants } = require('./variants.js');
 
 const ROOT = path.join(__dirname, '..');
 const WORK = path.join(ROOT, '.work');
+const LEX = path.join(WORK, 'lexicon');
 const DATA = path.join(ROOT, 'data');
 const DIST = path.join(ROOT, 'dist');
 const VERSION = '1.0.0';
@@ -110,9 +114,16 @@ function merge(seed, parsed) {
 }
 
 /* ---------- 2. 繁简折叠表（OpenCC TSCharacters 全表，供显示切换与检索） ---------- */
-function buildFold(poems) {
-  const file = path.join(WORK, 'TSCharacters.txt');
-  if (!fs.existsSync(file)) { console.warn('  未找到 TSCharacters.txt，跳过繁简折叠'); return []; }
+function lexFile(name) {
+  const p = path.join(LEX, name);
+  if (fs.existsSync(p)) return p;
+  const legacy = path.join(WORK, name);
+  return fs.existsSync(legacy) ? legacy : null;
+}
+
+function buildFold() {
+  const file = lexFile('TSCharacters.txt');
+  if (!file) { console.warn('  未找到 TSCharacters.txt，跳过繁简折叠（请先运行 node tools/fetch-lexicon.js）'); return []; }
   const lines = fs.readFileSync(file, 'utf-8').split('\n');
   const pairs = [];
   const used = new Set();
@@ -129,6 +140,31 @@ function buildFold(poems) {
   }
   console.log(`  折叠表：${pairs.length} 对`);
   return pairs;
+}
+
+/* ---------- 2b. 异体字规范化（VAR：异体 → 标准简体） ---------- */
+function buildVariant(poems) {
+  if (!fs.existsSync(path.join(LEX, 'TSCharacters.txt'))) {
+    console.warn('  未找到异体字词典，跳过异体规范化（请先运行 node tools/fetch-lexicon.js）');
+    return { pairs: [], stats: {} };
+  }
+  let corpus = '';
+  for (const p of poems) corpus += (p.title || '') + (p.content || '');
+  const v = buildVariants(corpus, LEX);
+  console.log(`  异体字：${v.stats.variants} 种 / ${v.stats.occurrences} 次（另有罕用正字 ${v.stats.unresolved} 种保持原样）`);
+  return v;
+}
+
+/* ---------- 2c. 拼音库（pinyin-pro，MIT；构建期内嵌，查看器离线可用） ---------- */
+function buildPinyinLib() {
+  const file = path.join(ROOT, 'node_modules', 'pinyin-pro', 'dist', 'index.js');
+  if (!fs.existsSync(file)) {
+    console.warn('  未找到 pinyin-pro，查看器拼音功能将不可用（请执行 npm install）');
+    return 'window.pinyinPro=null;';
+  }
+  const src = fs.readFileSync(file, 'utf-8');
+  console.log(`  拼音库：pinyin-pro ${require(path.join(ROOT, 'node_modules', 'pinyin-pro', 'package.json')).version}（${(Buffer.byteLength(src) / 1024).toFixed(0)} KB）`);
+  return src;
 }
 
 /* ---------- 3. 输出 ---------- */
@@ -189,11 +225,15 @@ function main() {
   fs.writeFileSync(path.join(DIST, 'qianlong-poems.json'),
     JSON.stringify({ meta: db.meta, poems: cp }, null, 2), 'utf-8');
 
-  const fold = buildFold(poems);
+  const fold = buildFold();
+  const variant = buildVariant(poems);
+  const pinyin = buildPinyinLib();
   const tpl = fs.readFileSync(path.join(ROOT, 'app', 'viewer.template.html'), 'utf-8');
   const html = tpl
-    .replace('/*__DB__*/', JSON.stringify({ poems: cp }))
-    .replace('/*__FOLD__*/', JSON.stringify(fold))
+    .replace('/*__DB__*/', () => JSON.stringify({ poems: cp }))
+    .replace('/*__FOLD__*/', () => JSON.stringify(fold))
+    .replace('/*__VAR__*/', () => JSON.stringify(variant.pairs))
+    .replace('/*__PINYIN__*/', () => pinyin)
     .replace('__VERSION__', VERSION)
     .replace('__BUILT__', new Date().toISOString().slice(0, 10))
     .replace('__COUNT__', String(poems.length));
