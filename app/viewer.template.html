@@ -146,6 +146,44 @@ main{display:grid;grid-template-columns:minmax(360px,440px) 1fr;gap:18px;align-i
 .statgrid{display:flex;gap:24px;flex-wrap:wrap;font-size:13px;color:var(--ink-2);padding:14px 2px 2px}
 .statgrid b{color:var(--ink);font-size:18px;font-family:var(--serif)}
 
+/* ---------- 数据分析 ---------- */
+.atabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.atab{padding:6px 16px;border-radius:20px;border:1px solid var(--line-2);background:var(--card);cursor:pointer;font-size:13px;color:var(--ink-2);transition:.12s}
+.atab:hover{border-color:var(--gold);color:var(--ink)}
+.atab.on{background:var(--verm);border-color:var(--verm);color:#fff}
+.aqln{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.aqln input{flex:1 1 240px;min-width:220px;border:1px solid var(--line-2);border-radius:9px;background:var(--card);padding:8px 12px;font-size:15px;outline:0;color:inherit}
+.aqln input:focus-visible{border-color:var(--gold);box-shadow:0 0 0 3px var(--focus)}
+.acards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0 4px}
+.acard{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--paper-2)}
+.acard .lb{font-size:12px;color:var(--muted)}
+.acard .va{font-size:22px;font-family:var(--serif);color:var(--ink);margin-top:2px}
+.acard .va small{font-size:12px;color:var(--ink-2);font-family:var(--sans)}
+.asub{margin-top:16px}
+.asub h4{font-size:12px;letter-spacing:.12em;color:var(--muted);margin:0 0 8px;font-weight:600}
+.bars{display:flex;align-items:flex-end;gap:6px;height:96px}
+.bar{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px}
+.bar .b{width:100%;max-width:58px;border-radius:4px 4px 0 0;background:var(--gold);opacity:.85}
+.bar .b.on{background:var(--verm)}
+.bar .lab{font-size:11px;color:var(--ink-2);white-space:nowrap}
+.bar .n{font-size:11px;color:var(--muted)}
+.chipsline{display:flex;gap:8px;flex-wrap:wrap}
+.chip2{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;font-family:var(--serif);transition:.12s}
+.chip2:hover{border-color:var(--gold)}
+.arankbox{max-height:56vh;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.atable{width:100%;border-collapse:collapse;font-size:13px}
+.atable th,.atable td{padding:6px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+.atable th:first-child,.atable td:first-child{text-align:left;font-family:var(--serif)}
+.atable th{color:var(--muted);font-weight:600;cursor:pointer;position:sticky;top:0;background:var(--card);z-index:2;user-select:none}
+.atable th:hover{color:var(--ink)}
+.atable th .dot{color:var(--verm)}
+.atable tbody tr{cursor:pointer}
+.atable tbody tr:hover{background:var(--paper-2)}
+.atable .term{font-family:var(--serif);font-size:14.5px;color:var(--ink)}
+.atable .numb{font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.atagch{display:inline-flex;align-items:center;gap:10px;margin-top:8px;color:var(--muted);font-size:12px}
+.atagch b{color:var(--verm);cursor:pointer;font-weight:600}
+
 /* ---------- misc ---------- */
 .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);
   padding:9px 16px;border-radius:9px;font-size:13px;opacity:0;pointer-events:none;transition:.2s;z-index:60}
@@ -176,6 +214,7 @@ footer{border-top:1px solid var(--line);padding:18px 0 40px;color:var(--muted);f
       <div class="tools">
         <button class="btn ghost" id="pyBtn" title="漢語拼音注音（詩題與詩句）" aria-pressed="false">拼音</button>
         <button class="btn ghost" id="statsBtn" title="統計">統計</button>
+        <button class="btn ghost" id="anBtn" title="數據分析（字詞頻率／排行）">分析</button>
         <button class="btn ghost" id="themeBtn" title="深色模式" aria-label="深色模式">◐</button>
       </div>
     </div>
@@ -234,6 +273,57 @@ footer{border-top:1px solid var(--line);padding:18px 0 40px;color:var(--muted);f
     <div class="hist-wrap"><div class="hist" id="hist"></div></div>
     <div class="legend" id="legend"></div>
   </section>
+
+  <section class="panel stats" id="apanel" style="margin-top:16px" aria-label="數據分析">
+    <div style="padding:16px 20px">
+      <div class="atabs" role="tablist" aria-label="分析視圖">
+        <button class="atab on" data-atab="query" role="tab" aria-selected="true">查字·詞</button>
+        <button class="atab" data-atab="rank" role="tab" aria-selected="false">全庫排行</button>
+        <button class="atab" data-atab="poem" role="tab" aria-selected="false">本篇分析</button>
+      </div>
+      <div class="hint" id="anote" style="margin-bottom:10px"></div>
+      <div id="aq">
+        <div class="aqln">
+          <label class="sr" for="aqInput">輸入字或詞</label>
+          <input id="aqInput" type="text" placeholder="輸入某個字或詞，一鍵統計（如：春、天、高樓）…" autocomplete="off" spellcheck="false">
+          <button class="btn primary" id="aqGo">統計</button>
+          <button class="btn ghost" id="aqClear">清空</button>
+          <span class="hint" id="aqNote"></span>
+        </div>
+        <div id="aqResult"></div>
+      </div>
+      <div id="ar" style="display:none">
+        <div class="aqln">
+          <div class="fgroup"><label>單位</label>
+            <select id="arUnit">
+              <option value="c">單字</option>
+              <option value="w">二字詞</option>
+            </select>
+          </div>
+          <div class="fgroup"><label>顯示</label>
+            <select id="arLimit">
+              <option value="100">前 100</option>
+              <option value="300" selected>前 300</option>
+              <option value="1000">前 1000</option>
+            </select>
+          </div>
+          <span class="hint">點表頭切換排序 · 按行可轉查該字詞</span>
+        </div>
+        <div class="arankbox"><table class="atable" id="arTable" aria-label="字詞頻率排行">
+          <thead><tr>
+            <th data-k="term">字 / 詞<span class="dot"></span></th>
+            <th data-k="poems">出現詩數<span style="color:var(--verm)">↓</span></th>
+            <th data-k="ratio">佔全庫比<span></span></th>
+            <th data-k="total" class="numb">總次數<span></span></th>
+            <th data-k="avg" class="numb">平均每詩<span></span></th>
+          </tr></thead>
+          <tbody id="arBody"></tbody>
+        </table></div>
+      </div>
+      <div id="ap" style="display:none"></div>
+    </div>
+  </section>
+
   <main>
     <section class="panel panel-list">
       <div class="listhead">
@@ -265,6 +355,7 @@ footer{border-top:1px solid var(--line);padding:18px 0 40px;color:var(--muted);f
 <script id="DB" type="application/json">/*__DB__*/</script>
 <script id="FOLD" type="application/json">/*__FOLD__*/</script>
 <script id="VAR" type="application/json">/*__VAR__*/</script>
+<script id="FREQ" type="application/json">/*__FREQ__*/</script>
 <script>/*__PINYIN__*/</script>
 <script>
 (function(){
@@ -396,6 +487,7 @@ function applyLang(){
   renderAll(true);
   store('ql_lang',state.lang);
   syncHash();
+  if(document.getElementById('apanel')&&$('#apanel').classList.contains('on'))renderAnalysisTab();
 }
 
 /* ---------- 数据装载 ---------- */
@@ -601,6 +693,7 @@ function renderDetail(){
     '<div class="acts">'+
       '<button class="btn" id="vBtn" title="'+T('橫排／直排')+'">'+T(state.vertical?'橫排':'堅排')+'</button>'+
       '<button class="btn primary" id="copyBtn">'+T('複製詩文')+'</button>'+
+      '<button class="btn" id="anaBtn">'+T('分析本篇')+'</button>'+
       '<button class="btn" id="favTog">'+(FAV.has(p.id)?'★ '+T('已收藏'):'☆ '+T('收藏'))+'</button>'+
       '<button class="btn" id="linkBtn">'+T('複製連結')+'</button>'+
       '<button class="btn ghost" id="prevBtn">'+T('上一篇')+'</button>'+
@@ -773,6 +866,7 @@ elDetail.addEventListener('click',async e=>{
     const txt=(state.vertical?'':plainText(p.t)+'\n\n')+plainText(p.c);
     const ok=await copyText(txt);toast(ok?'已複製詩文':'複製失敗（瀏覽器受限）');}
   if(id==='favTog'){toggleFav(state.sel);renderDetail();localizeDynamic();}
+  if(id==='anaBtn'){openAnalysis('poem');}
   if(id==='linkBtn'){const ok=await copyText(location.href);toast(ok?'已複製連結':'複製失敗（瀏覽器受限）');}
   if(id==='prevBtn'||id==='nextBtn')stepPoem(id==='prevBtn'?-1:1);
 });
@@ -833,6 +927,163 @@ $('#impFile').addEventListener('change',ev=>{
   r.readAsText(f);
 });
 
+/* ---------- 数据分析 ---------- */
+const AF_JI=['初集','二集','三集','四集','五集','餘集','未分集'];
+const AR={tab:'query',unit:'c',key:'poems',dir:-1,limit:300};
+let AQ_STATE=null;                  /* 最近一次查询结果 */
+let _FREQ_READY=false,_CHARS=[],_WORDS=[],_CFREQ=null,_WFREQ=null;
+const CJK1=/[\u3400-\u9FFF\uF900-\uFAFF]/;
+function freqTables(){
+  if(_FREQ_READY)return;
+  let d={chars:[],words:[]};
+  try{d=JSON.parse(document.getElementById('FREQ').textContent||'{"chars":[],"words":[]}');}catch(e){}
+  _CHARS=d.chars||[];_WORDS=d.words||[];
+  _CFREQ=new Map(_CHARS.map(r=>[r[0],[r[1],r[2]]]));
+  _WFREQ=new Map(_WORDS.map(r=>[r[0],[r[1],r[2]]]));
+  _FREQ_READY=true;
+}
+function acard(lb,val,sub){return '<div class="acard"><div class="lb">'+esc(lb)+'</div><div class="va">'+esc(String(val))+(sub?'<small> '+esc(String(sub))+'</small>':'')+'</div></div>';}
+function aCount(f,q){let n=0,i=0;while((i=f.indexOf(q,i))>=0){n++;i+=q.length;}return n;}
+/* 某字/词：出现的诗数 + 总次数 + 集别分布（与检索同源折叠，繁/简/异体一致） */
+function aAnalyze(raw){
+  const q=fkey(raw);
+  if(!q)return null;
+  let poems=0,total=0;const byJi={};
+  for(const p of SRC()){
+    const ft=foldInfo(p,'t').f,fc=foldInfo(p,'c').f;
+    const ni=ft.indexOf(q),nj=fc.indexOf(q);
+    if(ni<0&&nj<0)continue;
+    total+=(ni>=0?aCount(ft,q):0)+(nj>=0?aCount(fc,q):0);
+    poems++;const k=p.ji||'未分集';byJi[k]=(byJi[k]||0)+1;
+  }
+  return {raw,q,poems,total,byJi};
+}
+function aSet(raw){$('#aqInput').value=raw;AQ_STATE=aAnalyze(raw);renderQuery();aqNote();}
+function aqNote(){
+  const n=$('#aqNote');if(!n)return;
+  n.textContent=AQ_STATE?(AQ_STATE.poems?'':'· '+T('無命中：未檢得可折合的字詞')):'';
+}
+function renderQuery(){
+  const box=$('#aqResult');
+  if(!AQ_STATE){box.innerHTML='<div class="empty" style="padding:20px">'+T('輸入某個字或詞並點「統計」，即得其在全部詩中的出現詩數、總次數與分集分佈。')+'</div>';return;}
+  freqTables();
+  const {poems,total,byJi}=AQ_STATE;
+  const denom=BASE.length;
+  const cards=
+    '<div class="acards">'+
+    acard(T('出現詩數'),poems)+
+    acard(T('佔全庫比'),(denom?(poems/denom*100).toFixed(2):'0')+'%',T('總')+' '+denom+' '+T('首'))+
+    acard(T('總出現次數'),total)+
+    acard(T('平均每詩'),poems?(total/poems).toFixed(2):'0')+
+    '</div>';
+  const vals=AF_JI.map(j=>byJi[j]||0);const max=Math.max(1,...vals);
+  const bars=AF_JI.map((j,i)=>
+    '<div class="bar" title="'+esc(T(j))+' · '+(vals[i]||0)+' '+T('首')+'">'+
+      '<div class="n">'+(vals[i]||'')+'</div>'+
+      '<div class="b" style="height:'+(vals[i]?Math.max(4,vals[i]/max*100):2)+'%"></div>'+
+      '<div class="lab">'+esc(T(j))+'</div></div>').join('');
+  let rel='';
+  if([...AQ_STATE.q].length===1&&_WORDS.length){
+    const c=[...AQ_STATE.q][0];const matches=[];
+    for(const r of _WORDS){if(fkey(plainText(r[0])).indexOf(c)>=0)matches.push(r);}
+    matches.sort((a,b)=>b[1]-a[1]);
+    const rels=matches.slice(0,18);
+    if(rels.length)rel='<div class="asub"><h4>'+T('相關二字搭配（按出現詩數）')+'</h4><div class="chipsline">'+
+      rels.map(r=>'<button class="chip2" data-term="'+esc(plainText(r[0]))+'">'+esc(plainText(r[0]))+'<span class="atagch">'+r[1]+'</span></button>').join('')+'</div></div>';
+  }
+  box.innerHTML=cards+
+    '<div class="asub"><h4>'+T('分集分佈（出現該字詞之詩數）')+'</h4><div class="bars">'+bars+'</div></div>'+
+    rel;
+  box.querySelectorAll('.chip2').forEach(b=>b.addEventListener('click',()=>aSet(b.dataset.term)));
+}
+function arVal(r,k){switch(k){
+  case 'poems':return r[1];case 'total':return r[2];case 'avg':return r[2]/r[1];
+  case 'ratio':return r[1]/BASE.length;case 'term':return r[0];}}
+function arRows(){
+  const arr=AR.unit==='c'?_CHARS:_WORDS;
+  if(!arr.length)return[];
+  const _a=arr.slice().sort((a,b)=>{const va=arVal(a,AR.key),vb=arVal(b,AR.key);
+    if(AR.key==='term')return AR.dir<0?vb.localeCompare(va,'zh'):va.localeCompare(vb,'zh');
+    return AR.dir<0?(vb-va):(va-vb);});
+  return _a.slice(0,AR.limit);
+}
+function renderRank(){
+  freqTables();
+  const denom=BASE.length;
+  $('#arTable thead th').forEach(th=>{const s=th.querySelector('span');
+    if(s&&th.dataset.k!=='term')s.textContent=(AR.key===th.dataset.k?(AR.dir<0?'↓':'↑'):'');});
+  if(!_CHARS.length){$('#arBody').innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:18px">'+T('無數據')+'</td></tr>';return;}
+  const rows=arRows();
+  $('#arBody').innerHTML=rows.map(r=>{
+    const avg=r[2]/r[1];return '<tr data-term="'+esc(plainText(r[0]))+'">'+
+      '<td class="term">'+esc(plainText(r[0]))+'</td>'+
+      '<td class="numb">'+r[1]+'</td>'+
+      '<td class="numb">'+(r[1]/denom*100).toFixed(2)+'%</td>'+
+      '<td class="numb">'+r[2]+'</td>'+
+      '<td class="numb">'+avg.toFixed(2)+'</td></tr>';}).join('');
+  $('#arBody').querySelectorAll('tr').forEach(tr=>tr.addEventListener('click',()=>{aSet(tr.dataset.term);switchAnalysis('query');}));
+  $('#anote').textContent=T('全庫字/詞頻率排行 · 單字 ')+_CHARS.length+T(' 種 · 二字詞 ')+_WORDS.length+T(' 種（詩數≥2 收錄） · 共 ')+denom+T(' 首');
+  localize($('#anote'));
+}
+function renderPoem(){
+  const all=SRC();const p=all.find(x=>x.id===state.sel)||all[0];
+  if(!p){$('#ap').innerHTML='<div class="empty" style="padding:20px">'+T('暫無詩篇可供分析')+'</div>';return;}
+  freqTables();
+  const chars=[];for(const ch of (p.t||'')+(p.c||''))if(CJK1.test(ch))chars.push(ch);
+  let cnt=new Map();for(const ch of chars)cnt.set(ch,(cnt.get(ch)||0)+1);
+  const uniq=cnt.size,len=chars.length;
+  const top=[...cnt.entries()].sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const rare=[...cnt.keys()].filter(ch=>{const e=_CFREQ.get(ch);return !e||e[0]<=3;}).slice(0,40);
+  const bcnt=new Map();for(let i=0;i<chars.length-1;i++){if(CJK1.test(chars[i])&&CJK1.test(chars[i+1])){const w=chars[i]+chars[i+1];bcnt.set(w,(bcnt.get(w)||0)+1);}}
+  const topw=[...bcnt.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const corpusTotalChars=_CHARS.reduce((s,r)=>s+r[2],0);
+  const avgLen=BASE.length?(corpusTotalChars/BASE.length):0;
+  $('#ap').innerHTML=
+    '<div class="acards">'+
+    acard(T('全詩字數'),len)+
+    acard(T('去重字種'),uniq)+
+    acard(T('字種率'),uniq&&len?((uniq/len*100).toFixed(1)+'%'):'—')+
+    acard(T('全庫每詩均值'),avgLen.toFixed(0),T('字'))+
+    '</div>'+
+    '<div class="asub"><h4>'+T('高頻字 TOP · 點可按行轉查')+'</h4><div class="chipsline">'+
+      top.map(([ch,n])=>'<button class="chip2" data-term="'+esc(plainText(ch))+'">'+esc(plainText(ch))+'<span class="atagch">'+n+'</span></button>').join('')+'</div></div>'+
+    (topw.length?'<div class="asub"><h4>'+T('詩中二字詞 TOP')+'</h4><div class="chipsline">'+
+      topw.map(([w,n])=>'<button class="chip2" data-term="'+esc(plainText(w))+'">'+esc(plainText(w))+'<span class="atagch">'+n+'</span></button>').join('')+'</div></div>':'')+
+    '<div class="asub"><h4>'+T('全庫低頻字（詩數≤3，生僻）')+'</h4><div>'+
+      (rare.length?rare.map(ch=>'<button class="chip2" data-term="'+esc(plainText(ch))+'" style="font-size:12px">'+esc(plainText(ch))+'</button>').join(' '):'<span class="hint">'+T('無')+'</span>')+'</div></div>';
+  $('#ap').querySelectorAll('.chip2').forEach(b=>b.addEventListener('click',()=>{aSet(b.dataset.term);switchAnalysis('query');}));
+}
+function switchAnalysis(tab){
+  AR.tab=tab;
+  $('#apanel .atab').forEach(b=>{const on=b.dataset.atab===tab;b.classList.toggle('on',on);b.setAttribute('aria-selected',on?'true':'false');});
+  $('#aq').style.display=tab==='query'?'':'none';
+  $('#ar').style.display=tab==='rank'?'':'none';
+  $('#ap').style.display=tab==='poem'?'':'none';
+  renderAnalysisTab();
+}
+function renderAnalysisTab(){
+  if(AR.tab==='query'){if(!AQ_STATE){$('#aqResult').innerHTML='<div class="empty" style="padding:20px">'+T('輸入某個字或詞並點「統計」，即得其在全部詩中的出現詩數、總次數與分集分佈。')+'</div>';}else{renderQuery();}}
+  else if(AR.tab==='rank'){renderRank();}
+  else{renderPoem();}
+  localize(AR.tab==='query'?$('#aqResult'):AR.tab==='rank'?$('#ar'):$('#ap'));
+  localize($('#anote'));localize($('#aqNote'));
+}
+function openAnalysis(tab){$('#stats').classList.remove('on');$('#statsBtn').classList.remove('on');
+  $('#apanel').classList.add('on');$('#anBtn').classList.add('on');switchAnalysis(tab||AR.tab);}
+function closeAnalysis(){$('#apanel').classList.remove('on');$('#anBtn').classList.remove('on');}
+
+$('#anBtn').addEventListener('click',()=>{$('#apanel').classList.contains('on')?closeAnalysis():openAnalysis(AR.tab);});
+$('#statsBtn').addEventListener('click',()=>{if($('#stats').classList.contains('on'))closeAnalysis();});
+$('#apanel .atabs').addEventListener('click',e=>{const b=e.target.closest('.atab');if(b)switchAnalysis(b.dataset.atab);});
+$('#aqGo').addEventListener('click',()=>aSet($('#aqInput').value));
+$('#aqInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();aSet(e.target.value);}});
+$('#aqClear').addEventListener('click',()=>{$('#aqInput').value='';AQ_STATE=null;renderQuery();aqNote();});
+$('#arUnit').addEventListener('change',()=>{AR.unit=$('#arUnit').value;AR.key='poems';AR.dir=-1;renderRank();});
+$('#arLimit').addEventListener('change',()=>{AR.limit=+$('#arLimit').value;renderRank();});
+$('#arTable thead').addEventListener('click',e=>{const th=e.target.closest('th');if(!th||!th.dataset.k)return;
+  const k=th.dataset.k;if(k==='term'){AR.key=k;AR.dir=1;renderRank();return;}
+  if(AR.key===k)AR.dir*=-1;else{AR.key=k;AR.dir=-1;}
+  renderRank();});
 /* ---------- 启动 ---------- */
 (function init(){
   state.reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;

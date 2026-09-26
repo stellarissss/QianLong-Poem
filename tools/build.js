@@ -16,6 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const { parseAll } = require('./import.js');
 const { buildVariants } = require('./variants.js');
+const { buildFreq } = require('./freq.js');
 
 const ROOT = path.join(__dirname, '..');
 const WORK = path.join(ROOT, '.work');
@@ -227,12 +228,14 @@ function main() {
 
   const fold = buildFold();
   const variant = buildVariant(poems);
+  const freq = buildFreq(poems);
   const pinyin = buildPinyinLib();
   const tpl = fs.readFileSync(path.join(ROOT, 'app', 'viewer.template.html'), 'utf-8');
   const html = tpl
     .replace('/*__DB__*/', () => JSON.stringify({ poems: cp }))
     .replace('/*__FOLD__*/', () => JSON.stringify(fold))
     .replace('/*__VAR__*/', () => JSON.stringify(variant.pairs))
+    .replace('/*__FREQ__*/', () => JSON.stringify(freq))
     .replace('/*__PINYIN__*/', () => pinyin)
     .replace('__VERSION__', VERSION)
     .replace('__BUILT__', new Date().toISOString().slice(0, 10))

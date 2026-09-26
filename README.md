@@ -31,6 +31,7 @@
 - **界面／全文簡繁切換**：頂欄「語言」下拉可在 `繁體` 與 `简体` 之間切換，介面標籤與詩文全文同步轉換。係以底本繁體為唯一正本，簡體僅作顯示轉換（OpenCC TSCharacters 表），切回繁體即還原，主體文字不經來回轉換以免失真；乾隆、著、於等專名／易歧義字保持原字。
 - **異體字規範化（簡體態）**：木刻底本多存異體（如「髙」「逺」「㡬」「㑹」「眀」「窓」「塲」），已據 OpenCC、Unihan、《異體字字典》、cjkvi-variants 諸表逐字核校，折為標準簡體顯示，並於該字之下以全角括號回標異體原文（如 `高（髙）`），字側附註不擾行距、不改排版，複製所得仍為純文本。共規範 1,291 種異體、涉及 98,299 次出現。
 - **漢語拼音注音**：頂欄「拼音」可為**詩題與詩句**逐字標註帶聲調拼音（`ruby` 附註於字上，豎排時自動移於字側），兼顧多音字；拼音庫於構建期內嵌，離線可用。生僻異體若拼音庫未收，則改標其正字之音。
+- **數據分析**：頂欄「分析」展開三視圖——查字·詞（輸入任一單字或二字詞，一鍵得其出現詩數、佔全庫比、總次數、平均每詩與分集柱狀分佈）、全庫排行（單字／二字詞按出現詩數或總次數排序，可分頁）、本篇分析（當前詩的字詞統計）。字頻／詞頻於構建期由 [`tools/freq.js`](tools/freq.js) 預統計並內嵌，跨簡繁／異體與主檢索同源，故「山」在分析內與在主檢索所得詩數一致。
 - **年份篩選**：公元年起止輸入，或點擊 `初集`～`五集` 快捷年份段。
 
 **瀏覽**
@@ -98,15 +99,15 @@
 
 ### 派生鏈（Derivation Chain）
 
-```
-tools/fetch-lexicon.js  取 OpenCC 繁簡表、Unicode Unihan、cjkvi-variants 異體庫    .work/lexicon/*.txt
-tools/fetch-kanripo.js  克隆／增量更新底本倉庫                                     .work/repo/KR4f0005_NNN.txt
-  └─ tools/import.js    以各集《目録》比對定位詩題：還原跨行、抬格詩題，
-                        區分序文／按語與詩句，干支紀年映射公元年
-       └─ tools/variants.js   據諸表並以讀音校驗，核定「異體→標準簡體」對照
-            └─ tools/build.js 合併精選語料、去重編號，生成折疊表／異體表與內嵌數據
+```text
+└─ tools/fetch-lexicon.js    取 OpenCC 繁簡表、Unicode Unihan、cjkvi-variants 異體庫    .work/lexicon/*.txt
+tools/fetch-kanripo.js         克隆／增量更新底本倉庫                                     .work/repo/KR4f0005_NNN.txt
+  └─ tools/import.js           以各集《目録》比對定位詩題：還原跨行、抬格詩題，
+                               區分序文／按語與詩句，干支紀年映射公元年
+       ├─ tools/variants.js   據諸表並以讀音校驗，核定「異體→標準簡體」對照
+       └─ tools/freq.js       全庫字／詞（二字）頻預統計，供「分析」模組
+            └─ tools/build.js 合併精選語料、去重編號，生成折疊表／異體表／頻統計與內嵌數據
                  └─ dist/qianlong-poems.html / data/poems.json
-```
 
 每一步均可重跑復現：`fetch` 僅依賴公開倉庫與詞典，`import`／`variants`／`build` 為純函數式轉換。
 
@@ -175,6 +176,7 @@ qianlong-poems/
 │   ├── fetch-lexicon.js       # 繁簡／異體字詞典抓取與緩存（可復現構建的前提）
 │   ├── import.js              # 分卷文本 → 結構化詩作
 │   ├── variants.js            # 異體字核定：諸表 + 讀音校驗 + 人工複核 → 異體表
+│   ├── freq.js                # 全庫字／二字詞頻預統計 → 「分析」模組
 │   └── build.js               # 合併構建數據庫與查看器
 └── README.md
 ```
