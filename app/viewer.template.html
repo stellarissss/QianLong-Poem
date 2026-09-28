@@ -79,16 +79,16 @@ header{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--paper
 
 /* ---------- layout ---------- */
 main{display:grid;grid-template-columns:minmax(360px,440px) 1fr;gap:18px;align-items:start;padding:18px 0 60px}
-@media(max-width:1040px){main{grid-template-columns:1fr}.detail{position:static!important}.panel-list .list{height:56vh}}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
 .listhead{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);
-  position:sticky;top:64px;background:var(--card);border-radius:14px 14px 0 0;z-index:5}
+  position:sticky;top:var(--headh,64px);background:var(--card);border-radius:14px 14px 0 0;z-index:5}
 .count{font-size:13px;color:var(--muted)}
 .count b{color:var(--ink);font-size:15px}
 
 /* 固定行高窗口化列表 */
 .list{overflow:auto;position:relative;will-change:transform}
-.list.virtual{height:calc(100vh - 216px)}
+.list.virtual{height:calc(100vh - 240px)}
+@supports(height:100dvh){.list.virtual{height:calc(100dvh - 240px)}}
 .vpad{position:relative;width:100%}
 .vwin{position:absolute;top:0;left:0;right:0}
 .item{padding:11px 12px;border-radius:10px;cursor:pointer;border:1px solid transparent;transition:.12s;height:118px;overflow:hidden}
@@ -105,8 +105,9 @@ main{display:grid;grid-template-columns:minmax(360px,440px) 1fr;gap:18px;align-i
 .listfoot{padding:10px 14px;text-align:center;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
 
 /* ---------- detail ---------- */
-.detail{position:sticky;top:80px}
+.detail{position:sticky;top:calc(var(--headh,64px) + 16px);scroll-margin-top:calc(var(--headh,64px) + 12px)}
 .dbody{padding:22px 26px 28px}
+.dback{margin-bottom:12px}
 .dtitle{font-family:var(--serif);font-size:26px;line-height:1.35;letter-spacing:.03em;margin:0 0 10px}
 .dmeta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
 .poem{font-family:var(--serif);font-size:19px;line-height:2.5;letter-spacing:.14em;white-space:pre-wrap;
@@ -162,11 +163,11 @@ main{display:grid;grid-template-columns:minmax(360px,440px) 1fr;gap:18px;align-i
 .asub{margin-top:16px}
 .asub h4{font-size:12px;letter-spacing:.12em;color:var(--muted);margin:0 0 8px;font-weight:600}
 .bars{display:flex;align-items:flex-end;gap:6px;height:96px}
-.bar{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px}
-.bar .b{width:100%;max-width:58px;border-radius:4px 4px 0 0;background:var(--gold);opacity:.85}
-.bar .b.on{background:var(--verm)}
-.bar .lab{font-size:11px;color:var(--ink-2);white-space:nowrap}
-.bar .n{font-size:11px;color:var(--muted)}
+.abar{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px}
+.abar .b{width:100%;max-width:58px;border-radius:4px 4px 0 0;background:var(--gold);opacity:.85}
+.abar .b.on{background:var(--verm)}
+.abar .lab{font-size:11px;color:var(--ink-2);white-space:nowrap}
+.abar .n{font-size:11px;color:var(--muted)}
 .chipsline{display:flex;gap:8px;flex-wrap:wrap}
 .chip2{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;font-family:var(--serif);transition:.12s}
 .chip2:hover{border-color:var(--gold)}
@@ -192,7 +193,67 @@ kbd{border:1px solid var(--line-2);border-bottom-width:2px;border-radius:4px;pad
 footer{border-top:1px solid var(--line);padding:18px 0 40px;color:var(--muted);font-size:12px}
 .fnote{display:flex;gap:18px;flex-wrap:wrap;align-items:center}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- 設備自適應：手機／平板／桌面各用其宜 ----------
+   data-device 由腳本依「視窗寬度為主、指標與觸控為輔」自動判定；
+   --headh 為實測頁首高度，供列表高度與吸頂偏移使用。 */
+.only-mobile{display:none}
+:root[data-device="mobile"] .only-mobile{display:inline-flex}
+
+/* 平板：單欄排布，詩文不再隨捲動吸頂 */
+:root[data-device="tablet"] main{grid-template-columns:1fr;gap:14px}
+:root[data-device="tablet"] .detail{position:static}
+
+/* 手機：主從兩屏——列表與詩文各佔一屏，互不擠壓 */
+:root[data-device="mobile"] .wrap{padding:0 12px}
+:root[data-device="mobile"] main{grid-template-columns:1fr;gap:12px;padding:12px 0 32px}
+:root[data-device="mobile"] .detail{position:static}
+:root[data-device="mobile"][data-view="list"] .detail{display:none}
+:root[data-device="mobile"][data-view="detail"] .panel-list{display:none}
+/* 頁首：品牌與工具各佔一行，檢索框整行；副題與快捷鍵提示從略 */
+:root[data-device="mobile"] .bar{gap:8px 10px;padding:10px 0 7px}
+:root[data-device="mobile"] .brand{order:1}
+:root[data-device="mobile"] .brand small{display:none}
+:root[data-device="mobile"] .tools{order:2;flex:1 1 auto;justify-content:flex-end}
+:root[data-device="mobile"] .searchbox{order:3;flex:1 1 100%;min-width:0}
+:root[data-device="mobile"] .searchbox kbd{display:none}
+/* 篩選：手機預設收起繁雜條件，只留常用操作；展開後不擠佔瀏覽高度 */
+:root[data-device="mobile"] .filters{padding:2px 0 10px;gap:8px}
+:root[data-device="mobile"] .filters .fgroup,
+:root[data-device="mobile"] .filters .chips{display:none}
+:root[data-device="mobile"] .filters.open .fgroup{display:flex}
+:root[data-device="mobile"] .filters.open .chips{display:flex}
+:root[data-device="mobile"] .fspacer{flex:0 0 0}
+/* 觸控目標與排版 */
+:root[data-device="mobile"] .btn{min-height:40px;padding:8px 13px}
+:root[data-device="mobile"] .chip{padding:6px 14px}
+:root[data-device="mobile"] .item{padding:10px 10px}
+:root[data-device="mobile"] .dbody{padding:16px 15px 22px}
+:root[data-device="mobile"] .dtitle{font-size:21px}
+:root[data-device="mobile"] .poem{font-size:18px;line-height:2.35;letter-spacing:.1em;padding:16px 15px}
+:root[data-device="mobile"] .poem.vertical{height:58dvh;font-size:19px;letter-spacing:.18em;padding:18px 14px}
+:root[data-device="mobile"] .kv{grid-template-columns:64px 1fr}
+:root[data-device="mobile"] .stats{padding:12px 14px}
+:root[data-device="mobile"] .hist{height:104px}
+/* 分析：輸入框放大避免 iOS 聚焦縮放，排行表可橫向捲動 */
+:root[data-device="mobile"] .aqln input{font-size:16px;flex:1 1 140px;min-width:0}
+:root[data-device="mobile"] .acards{grid-template-columns:repeat(2,1fr);gap:8px}
+:root[data-device="mobile"] .acard .va{font-size:19px}
+:root[data-device="mobile"] .arankbox{max-height:52dvh}
+:root[data-device="mobile"] .atable{min-width:520px}
+:root[data-device="mobile"] .bars{height:84px}
 </style>
+<script>
+/* 設備自適應：於首屏渲染前寫入 data-device，避免行動端先以桌面佈局閃現 */
+(function(){
+  function detect(){
+    var w=window.innerWidth,h=window.innerHeight,m=Math.min(w,h),c=window.matchMedia('(pointer:coarse)').matches,t=navigator.maxTouchPoints>0;
+    // 以「短邊」判手機：手機橫屏（如 844×390）短邊仍小，平板（如 810×1080）短邊夠大
+    return (w<=640||(c&&t&&m<=600))?'mobile':(w<=1040?'tablet':'desktop');
+  }
+  document.documentElement.dataset.device=detect();
+})();
+</script>
 </head>
 <body>
 <header>
@@ -212,13 +273,14 @@ footer{border-top:1px solid var(--line);padding:18px 0 40px;color:var(--muted);f
         <kbd>/</kbd>
       </div>
       <div class="tools">
+        <button class="btn ghost only-mobile" id="filterBtn" aria-expanded="false" aria-controls="filters" title="顯示／收起篩選">篩選</button>
         <button class="btn ghost" id="pyBtn" title="漢語拼音注音（詩題與詩句）" aria-pressed="false">拼音</button>
         <button class="btn ghost" id="statsBtn" title="統計">統計</button>
         <button class="btn ghost" id="anBtn" title="數據分析（字詞頻率／排行）">分析</button>
         <button class="btn ghost" id="themeBtn" title="深色模式" aria-label="深色模式">◐</button>
       </div>
     </div>
-    <div class="filters">
+    <div class="filters" id="filters">
       <div class="fgroup"><label>範圍</label>
         <select id="scope">
           <option value="all">綜合（詩題×3＋詩句）</option>
@@ -516,7 +578,7 @@ const elQ=$('#q'),elScope=$('#scope'),elFuzzy=$('#fuzzy'),elYF=$('#yFrom'),elYT=
 const elList=$('#list'),elVpad=$('#vpad'),elVwin=$('#vwin'),elCount=$('#count'),elMore=$('#more'),elDetail=$('#detail'),elHint=$('#modeHint');
 const elStats=$('#stats'),elHist=$('#hist'),elToast=$('#toast');
 
-const state={q:'',scope:'all',fuzzy:true,yf:null,yt:null,sort:'rel',favOnly:false,sel:null,histYear:null,lang:'Hant',vertical:false,pinyin:false};
+const state={q:'',scope:'all',fuzzy:true,yf:null,yt:null,sort:'rel',favOnly:false,sel:null,histYear:null,lang:'Hant',vertical:false,pinyin:false,device:'desktop'};
 let lastResults=[],lastScored=[];
 const ROW_H=118;
 
@@ -658,7 +720,7 @@ function renderList(){
     elHint.textContent='';
     return;
   }
-  elMore.innerHTML=T('已顯示前')+' <b>'+Math.min(total,500)+'</b> ／'+T('共')+' <b>'+total+'</b> '+T('篇 · 請在列表中捲動查看更多');
+  elMore.innerHTML=T('共')+' <b>'+total+'</b> '+T('篇 · 已全部載入，捲動列表續覽');
   elHint.textContent=state.q.trim()?(T(state.fuzzy?'模糊':'精確')+'·'+T({all:'綜合',title:'詩題',content:'詩句',year:'年份',regex:'正則'}[state.scope])):'';
   elList.scrollTop=elList.scrollTop||0;
   renderWindow();
@@ -667,12 +729,14 @@ function renderList(){
 /* ---------- 详情渲染 ---------- */
 function renderDetail(){
   const p=SRC().find(x=>x.id===state.sel);
-  if(!p){elDetail.innerHTML='<div class="empty" style="padding:80px 20px">'+T('從左側選擇一篇以查看全文')+'<div class="hint" style="margin-top:10px">'+T('或按')+' <kbd>R</kbd> '+T('隨機、')+'<kbd>D</kbd> '+T('每日一詩')+'</div></div>';return;}
+  if(!p){elDetail.innerHTML='<div class="empty" style="padding:80px 20px">'+T(state.device==='mobile'?'請從列表選擇一篇以查看全文':'從左側選擇一篇以查看全文')+
+    (state.device==='mobile'?'':'<div class="hint" style="margin-top:10px">'+T('或按')+' <kbd>R</kbd> '+T('隨機、')+'<kbd>D</kbd> '+T('每日一詩')+'</div>')+'</div>';return;}
   const rows=layout(p.c);
   const bodyHtml=rows.map(r=>'<span class="ln'+(r.alt?' alt':'')+'">'+charRun(r.t,hitsOfText(r.t),pyOf(r.t),true)+'</span>').join('');
   const gz=(p.gz&&p.gz.length)?p.gz.join('、'):'—';
   const prov=p.prov||{};
   elDetail.innerHTML='<div class="dbody">'+
+    '<button class="btn ghost only-mobile dback" id="backBtn">← '+T('返回列表')+'</button>'+
     '<h2 class="dtitle">'+charRun(p.t,hitsOfText(p.t),pyOf(p.t),true)+'</h2>'+
     '<div class="dmeta">'+
       '<span class="tag y">'+(p.y||T('年份未詳'))+'</span>'+
@@ -861,6 +925,7 @@ elVwin.addEventListener('keydown',e=>{
 });
 elDetail.addEventListener('click',async e=>{
   const id=e.target.id;
+  if(id==='backBtn'){setView('list');fitLayout();window.scrollTo({top:0,behavior:state.reduce?'auto':'smooth'});}
   if(id==='vBtn'){state.vertical=!state.vertical;store('ql_v',state.vertical?'1':'0');renderDetail();localizeDynamic();syncHash();}
   if(id==='copyBtn'){const p=SRC().find(x=>x.id===state.sel);
     const txt=(state.vertical?'':plainText(p.t)+'\n\n')+plainText(p.c);
@@ -889,6 +954,15 @@ function selectPoem(id){
   renderDetail();renderWindow();renderHist();
   localizeDynamic();
   syncHash();
+  if(state.device==='mobile'){          // 手機：切入詩文屏並回到頂端
+    setView('detail');
+    window.scrollTo({top:0,behavior:state.reduce?'auto':'smooth'});
+    return;
+  }
+  if(state.device==='tablet'){          // 平板：單欄排布，捲至詩文使選中篇目立即可見
+    elDetail.scrollIntoView({behavior:state.reduce?'auto':'smooth',block:'start'});
+    return;
+  }
   const it=elVwin.querySelector('.item.on');if(it)it.scrollIntoView({block:'nearest'});else elDetail.scrollIntoView({behavior:state.reduce?'auto':'smooth',block:'start'});
 }
 document.addEventListener('keydown',e=>{
@@ -978,7 +1052,7 @@ function renderQuery(){
     '</div>';
   const vals=AF_JI.map(j=>byJi[j]||0);const max=Math.max(1,...vals);
   const bars=AF_JI.map((j,i)=>
-    '<div class="bar" title="'+esc(T(j))+' · '+(vals[i]||0)+' '+T('首')+'">'+
+    '<div class="abar" title="'+esc(T(j))+' · '+(vals[i]||0)+' '+T('首')+'">'+
       '<div class="n">'+(vals[i]||'')+'</div>'+
       '<div class="b" style="height:'+(vals[i]?Math.max(4,vals[i]/max*100):2)+'%"></div>'+
       '<div class="lab">'+esc(T(j))+'</div></div>').join('');
@@ -1010,7 +1084,7 @@ function arRows(){
 function renderRank(){
   freqTables();
   const denom=BASE.length;
-  $('#arTable thead th').forEach(th=>{const s=th.querySelector('span');
+  document.querySelectorAll('#arTable thead th').forEach(th=>{const s=th.querySelector('span');
     if(s&&th.dataset.k!=='term')s.textContent=(AR.key===th.dataset.k?(AR.dir<0?'↓':'↑'):'');});
   if(!_CHARS.length){$('#arBody').innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:18px">'+T('無數據')+'</td></tr>';return;}
   const rows=arRows();
@@ -1055,7 +1129,7 @@ function renderPoem(){
 }
 function switchAnalysis(tab){
   AR.tab=tab;
-  $('#apanel .atab').forEach(b=>{const on=b.dataset.atab===tab;b.classList.toggle('on',on);b.setAttribute('aria-selected',on?'true':'false');});
+  document.querySelectorAll('#apanel .atab').forEach(b=>{const on=b.dataset.atab===tab;b.classList.toggle('on',on);b.setAttribute('aria-selected',on?'true':'false');});
   $('#aq').style.display=tab==='query'?'':'none';
   $('#ar').style.display=tab==='rank'?'':'none';
   $('#ap').style.display=tab==='poem'?'':'none';
@@ -1072,7 +1146,10 @@ function openAnalysis(tab){$('#stats').classList.remove('on');$('#statsBtn').cla
   $('#apanel').classList.add('on');$('#anBtn').classList.add('on');switchAnalysis(tab||AR.tab);}
 function closeAnalysis(){$('#apanel').classList.remove('on');$('#anBtn').classList.remove('on');}
 
-$('#anBtn').addEventListener('click',()=>{$('#apanel').classList.contains('on')?closeAnalysis():openAnalysis(AR.tab);});
+$('#anBtn').addEventListener('click',()=>{
+  const on=$('#apanel').classList.contains('on');
+  if(on)closeAnalysis();else{openAnalysis(AR.tab);if(state.device==='mobile')window.scrollTo({top:0,behavior:state.reduce?'auto':'smooth'});}
+});
 $('#statsBtn').addEventListener('click',()=>{if($('#stats').classList.contains('on'))closeAnalysis();});
 $('#apanel .atabs').addEventListener('click',e=>{const b=e.target.closest('.atab');if(b)switchAnalysis(b.dataset.atab);});
 $('#aqGo').addEventListener('click',()=>aSet($('#aqInput').value));
@@ -1084,6 +1161,36 @@ $('#arTable thead').addEventListener('click',e=>{const th=e.target.closest('th')
   const k=th.dataset.k;if(k==='term'){AR.key=k;AR.dir=1;renderRank();return;}
   if(AR.key===k)AR.dir*=-1;else{AR.key=k;AR.dir=-1;}
   renderRank();});
+/* ---------- 設備自適應：偵測、佈局量測、手機主從兩屏 ---------- */
+const elHead=document.querySelector('header');
+function detectDevice(){
+  const w=window.innerWidth,h=window.innerHeight,short=Math.min(w,h);
+  const coarse=matchMedia('(pointer:coarse)').matches,touch=navigator.maxTouchPoints>0;
+  // 與首屏內聯偵測同式：短邊小者為手機，取其宜兩屏；平板與桌面各歸其位
+  return (w<=640||(coarse&&touch&&short<=600))?'mobile':(w<=1040?'tablet':'desktop');
+}
+function setView(v){document.documentElement.dataset.view=v;}
+/* 列表高度與吸頂偏移皆依實測頁首高度計算，故頁首如何換行都不會壓縮列表 */
+function fitLayout(){
+  const hh=Math.round(elHead.getBoundingClientRect().height);
+  document.documentElement.style.setProperty('--headh',hh+'px');
+  const min=state.device==='mobile'?220:320;
+  elList.style.height=Math.max(min,Math.round(window.innerHeight-hh-(state.device==='desktop'?26:20)))+'px';
+  renderWindow();
+}
+function applyDevice(){
+  state.device=detectDevice();
+  document.documentElement.dataset.device=state.device;
+  if(state.device!=='mobile'||document.documentElement.dataset.view!=='detail')setView('list');
+  fitLayout();
+}
+$('#filterBtn').addEventListener('click',()=>{
+  const on=$('#filters').classList.toggle('open');
+  $('#filterBtn').classList.toggle('on',on);
+  $('#filterBtn').setAttribute('aria-expanded',on?'true':'false');
+  fitLayout();
+});
+
 /* ---------- 启动 ---------- */
 (function init(){
   state.reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1095,15 +1202,21 @@ $('#arTable thead').addEventListener('click',e=>{const th=e.target.closest('th')
   $('#brandCount').textContent=SRC().length;
   renderQuick();
   readHash();
+  const hashHadId=new URLSearchParams(location.hash.slice(1)).has('id'); // 僅分享連結自帶篇目者，手機才直落詩文屏
   elLang.value=state.lang;
   document.documentElement.lang=state.lang==='Hans'?'zh-Hans':'zh-Hant';
   syncPyBtn();
   computeBins();
+  applyDevice();                                   // 先定裝置與頁首高度，供首次渲染取用
   renderAll(false);
+  fitLayout();                                     // 列表內容就緒後再量一次
   snapStatic();
   applyStatic();
-  // 高度自适应
-  window.addEventListener('resize',()=>{clearTimeout(vTimer);vTimer=setTimeout(renderWindow,60);});
+  // 分享連結帶篇目時，手機直接落在詩文屏（依進入時的雜湊判定，renderAll 寫入的 id 不算）
+  if(state.device==='mobile'&&hashHadId)setView('detail');
+  // 視窗尺寸／方向變化：重新判定裝置並重算佈局
+  window.addEventListener('resize',()=>{clearTimeout(vTimer);vTimer=setTimeout(applyDevice,80);});
+  window.addEventListener('orientationchange',()=>{clearTimeout(vTimer);vTimer=setTimeout(applyDevice,150);});
 })();
 })();
 </script>
